@@ -1,6 +1,5 @@
 """
-elmoCut Launcher - All-in-One Script
-Checks dependencies, installs if needed, compiles UI, and runs the application
+elmoCut v1.0.8-kiraieee
 """
 
 import os

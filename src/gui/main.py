@@ -240,14 +240,15 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
 
         # Connect buttons
         self.buttons = [
-            (self.btnScanEasy,   self.scanEasy,      scan_easy_icon,  'Arping Scan'),
-            (self.btnScanHard,   self.scanHard,      scan_hard_icon,  'Pinging Scan'),
+            (self.btnScanEasy,   self.scanEasy,      scan_easy_icon,  'Easy Scan'),
+            (self.btnScanHard,   self.scanHard,      scan_hard_icon,  'Hard Scan'),
             (self.btnKill,       self.kill,          kill_icon,       'Kill selected device'),
             (self.btnUnkill,     self.unkill,        unkill_icon,     'Un-kill selected device'),
             (self.btnKillAll,    self.killAll,       killall_icon,    'Kill all devices'),
             (self.btnUnkillAll,  self.unkillAll,     unkillall_icon,  'Un-kill all devices'),
+            (self.btnDeviceInfo, self.openDeviceInfo, device_icon,    'Open device info window'),
             (self.btnSettings,   self.openSettings,  settings_icon,   'View elmoCut settings')
-        ] 
+        ]
         
         for btn, btn_func, btn_icon, btn_tip in self.buttons:
             btn.setToolTip(btn_tip)
@@ -459,6 +460,12 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
     def deviceDoubleClicked(self):
         """
         Open device info window (when not admin)
+        """
+        self.openDeviceInfo()
+    
+    def openDeviceInfo(self):
+        """
+        Open device info window for selected device
         """
         device = self.current_index()
         if device.admin:
