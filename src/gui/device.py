@@ -110,11 +110,11 @@ class DeviceWindow(QMainWindow, Ui_MainWindow):
         bandwidth_layout.addLayout(btn_layout)
         bandwidth_group.setLayout(bandwidth_layout)
         
-        # Add to main horizontal layout with 35% width (stretch factor 35)
+        # Add to main horizontal layout with 44% width (stretch factor 44, increased by 9)
         if hasattr(self, 'centralWidget'):
             main_layout = self.centralWidget().layout()
             if main_layout:
-                main_layout.addWidget(bandwidth_group, 35)
+                main_layout.addWidget(bandwidth_group, 44)
         
         self.bandwidth_group = bandwidth_group
     

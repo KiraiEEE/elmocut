@@ -34,7 +34,7 @@ SETTINGS_KEYS = ['dark', 'count', 'autostart', 'minimized', 'remember', 'killed'
 SETTINGS_VALS = [True, 25, False, True, False, [], True, 12, '', {}]
 
 # Terminal commands
-CMD_PING_DEVICE = 'ping -n 1 {}'.format
+CMD_PING_DEVICE = 'ping -n 1 -w 500 {}'.format
 CMD_ARP_CACHE = 'arp -a -N {} | findstr dynamic'.format
 CMD_ARP_CACHE_FLUSH = 'arp -d *'
 CMD_ARP_CACHE_FLUSH_NEW = 'netsh interface ip delete arpcache'

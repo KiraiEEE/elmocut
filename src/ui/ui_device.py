@@ -107,7 +107,7 @@ class Ui_MainWindow(object):
         self.txtNickname.setObjectName("txtNickname")
         self.gridLayout_3.addWidget(self.txtNickname, 0, 0, 1, 2)
         self.gridLayout.addWidget(self.groupBox_3, 2, 0, 1, 1)
-        self.mainHorizontalLayout.addLayout(self.gridLayout, 65)
+        self.mainHorizontalLayout.addLayout(self.gridLayout, 56)
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)

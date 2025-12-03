@@ -14,7 +14,7 @@ class Scanner():
     def __init__(self):
         self.iface = get_default_iface()
         self.device_count = 255  # Full subnet scan
-        self.max_threads = 32  # Increased for better performance
+        self.max_threads = 64  # Increased for better performance
         self.__ping_done = 0
         self.devices = []
         self.old_ips = {}
@@ -25,6 +25,7 @@ class Scanner():
         self.qt_progress_signal = int
         self.qt_log_signal = print
         self._device_cache = {}  # Cache for faster lookups
+        self._scan_pass = 0  # Track scan passes
     
     def generate_ips(self):
         self.ips = [f'{self.perfix}.{i}' for i in range(1, self.device_count)]
@@ -165,52 +166,100 @@ class Scanner():
     
     def arp_scan(self):
         """
-        Fast ARP scan using Scapy with improved reliability
+        Enhanced ARP scan with multi-pass and broadcast ping for maximum device detection
         """
         self.init()
-        logger.info(f'Starting ARP scan on {self.router_ip}/24')
+        logger.info(f'Starting enhanced ARP scan on {self.router_ip}/24')
         
         start_time = time()
         all_devices = set()  # Use set to collect unique devices
         
-        # Use arping with optimized parameters
         self.generate_ips()
+        network_range = f"{self.router_ip}/24"
         
+        # Step 1: Send broadcast ping to wake up devices
         try:
-            # Perform ARP scan with better timeout
-            scan_result = arping(
-                f"{self.router_ip}/24",
-                iface=self.iface.name,
-                verbose=0,
-                timeout=2,    # Increased timeout for reliability
-                inter=0.01,   # Small interval for speed
-                retry=1       # Single retry
-            )
-            
-            # Collect results
-            for item in scan_result[0]:
-                all_devices.add((item[1].psrc, item[1].src))
-            
-            logger.info(f'ARP scan found {len(all_devices)} devices')
-            
+            broadcast_ip = f"{self.perfix}.255"
+            logger.info(f'Sending broadcast ping to {broadcast_ip}')
+            terminal(CMD_PING_DEVICE(broadcast_ip), decode=False)
+            sleep(0.5)  # Wait for devices to respond
         except Exception as e:
-            logger.error(f'ARP scan failed: {e}')
+            logger.debug(f'Broadcast ping failed: {e}')
         
-        # Fallback: Also check system ARP cache for any missed devices
+        # Step 2: Multi-pass ARP scanning for better reliability
+        for scan_pass in range(1, 3):  # 2 passes
+            self._scan_pass = scan_pass
+            logger.info(f'ARP scan pass {scan_pass}/2')
+            
+            try:
+                # Perform ARP scan with aggressive parameters
+                scan_result = arping(
+                    network_range,
+                    iface=self.iface.name,
+                    verbose=0,
+                    timeout=3,      # Longer timeout for slow devices
+                    inter=0.005,    # Faster interval
+                    retry=2         # Multiple retries
+                )
+                
+                # Collect results from this pass
+                pass_devices = 0
+                for item in scan_result[0]:
+                    if (item[1].psrc, item[1].src) not in all_devices:
+                        all_devices.add((item[1].psrc, item[1].src))
+                        pass_devices += 1
+                
+                logger.info(f'Pass {scan_pass} found {pass_devices} new devices (total: {len(all_devices)})')
+                
+                # If second pass found no new devices, we're done
+                if scan_pass == 2 and pass_devices == 0:
+                    logger.info('No new devices found in second pass, scan complete')
+                    break
+                    
+            except Exception as e:
+                logger.error(f'ARP scan pass {scan_pass} failed: {e}')
+            
+            # Small delay between passes
+            if scan_pass < 2:
+                sleep(0.3)
+        
+        # Step 3: Check system ARP cache for any additional missed devices
         try:
+            logger.info('Checking system ARP cache for additional devices')
             arp_cache = terminal(CMD_ARP_CACHE(self.my_ip))
             if arp_cache:
+                cache_count = 0
                 cache_lines = [line.split()[:2] for line in arp_cache.split('\n') if line.split() and len(line.split()) >= 2]
                 for ip, mac in cache_lines:
-                    # Validate IP format
-                    if ip.count('.') == 3 and mac.count('-') >= 2:
-                        all_devices.add((ip, mac))
-                logger.info(f'Added {len(cache_lines)} devices from ARP cache')
+                    # Validate IP format and MAC format
+                    if ip.count('.') == 3 and (mac.count('-') >= 5 or mac.count(':') >= 5):
+                        if (ip, mac) not in all_devices:
+                            all_devices.add((ip, mac))
+                            cache_count += 1
+                if cache_count > 0:
+                    logger.info(f'Found {cache_count} additional devices in ARP cache')
         except Exception as e:
             logger.debug(f'ARP cache check failed: {e}')
         
+        # Step 4: Try direct ARP requests for common device IPs (router alternatives, common static IPs)
+        try:
+            logger.info('Probing common static IPs')
+            common_ips = [f"{self.perfix}.{i}" for i in [1, 2, 10, 20, 50, 100, 200, 254]]
+            for ip in common_ips:
+                if ip not in [d[0] for d in all_devices]:
+                    try:
+                        # Send direct ARP request
+                        ans = sr1(ARP(pdst=ip)/Ether(), timeout=0.5, verbose=0, iface=self.iface.name)
+                        if ans:
+                            all_devices.add((ans.psrc, ans.src))
+                            logger.debug(f'Found device at common IP {ip}')
+                    except:
+                        pass
+        except Exception as e:
+            logger.debug(f'Common IP probing failed: {e}')
+        
         clean_result = list(all_devices)
-        logger.info(f'Total scan completed in {time() - start_time:.2f}s, found {len(clean_result)} unique devices')
+        logger.info(f'Enhanced scan completed in {time() - start_time:.2f}s, found {len(clean_result)} unique devices')
         
         self.devices_appender(clean_result)
 
