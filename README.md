@@ -1,1 +1,1 @@
-a vibe coded tool
+TEST
