@@ -14,8 +14,8 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(950, 650)
-        MainWindow.setMinimumSize(QtCore.QSize(950, 650))
+        MainWindow.resize(1100, 650)
+        MainWindow.setMinimumSize(QtCore.QSize(1100, 650))
         MainWindow.setAnimated(True)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
@@ -81,13 +81,6 @@ class Ui_MainWindow(object):
         self.btnSettings.setIconSize(QtCore.QSize(28, 28))
         self.btnSettings.setObjectName("btnSettings")
         self.toolbarLayout.addWidget(self.btnSettings)
-        self.btnAbout = QtWidgets.QPushButton(self.centralwidget)
-        self.btnAbout.setMinimumSize(QtCore.QSize(46, 42))
-        self.btnAbout.setMaximumSize(QtCore.QSize(46, 42))
-        self.btnAbout.setText("")
-        self.btnAbout.setIconSize(QtCore.QSize(28, 28))
-        self.btnAbout.setObjectName("btnAbout")
-        self.toolbarLayout.addWidget(self.btnAbout)
         self.verticalLayout_main.addLayout(self.toolbarLayout)
         self.pgbar = QtWidgets.QProgressBar(self.centralwidget)
         self.pgbar.setMinimumSize(QtCore.QSize(0, 6))
@@ -155,7 +148,6 @@ class Ui_MainWindow(object):
         self.btnUnkillAll.setToolTip(_translate("MainWindow", "Restore All Devices"))
         self.btnUnkillAll.setText(_translate("MainWindow", "Restore All"))
         self.btnSettings.setToolTip(_translate("MainWindow", "Settings"))
-        self.btnAbout.setToolTip(_translate("MainWindow", "About"))
         self.tableScan.setSortingEnabled(True)
 
 

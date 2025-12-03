@@ -10,7 +10,6 @@ from PyQt5.QtWinExtras import QWinTaskbarButton
 from ui.ui_main import Ui_MainWindow
 
 from gui.settings import Settings
-from gui.about import About
 from gui.device import DeviceWindow
 
 from networking.scanner import Scanner
@@ -36,104 +35,125 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         base_stylesheet = load_stylesheet()
         
-        # Modern custom styles
-        modern_styles = """
-        /* Modern Button Styles */
+        # Pixel Art Fun Style - Vibrant retro gaming aesthetic!
+        pixel_art_styles = """
+        /* Main Window */
+        QMainWindow {
+            background-color: #2a1a3d;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* Pixel Art Button Styles */
         QPushButton {
-            background-color: #2d2d30;
-            border: 1px solid #3f3f46;
-            border-radius: 6px;
-            padding: 6px 12px;
-            font-weight: 500;
-            font-size: 10pt;
+            background-color: #ff6b9d;
+            border: 3px solid #c44569;
+            border-radius: 0px;
+            padding: 8px 16px;
+            font-weight: bold;
+            font-size: 11pt;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
         }
         
         QPushButton:hover {
-            background-color: #3e3e42;
-            border: 1px solid #569cd6;
+            background-color: #ffb3d9;
+            border: 3px solid #ff6b9d;
+            transform: scale(1.05);
         }
         
         QPushButton:pressed {
-            background-color: #1e1e1e;
-            border: 1px solid #007acc;
+            background-color: #c44569;
+            border: 3px solid #8e3a59;
         }
         
         QPushButton:disabled {
-            background-color: #252526;
-            border: 1px solid #3f3f46;
-            color: #6d6d6d;
+            background-color: #4a4a4a;
+            border: 3px solid #2a2a2a;
+            color: #888888;
         }
         
         /* Toolbar Separator Lines */
         QFrame[frameShape="5"] {
-            color: #3f3f46;
-            max-width: 1px;
+            color: #ffd93d;
+            max-width: 2px;
         }
         
-        /* Progress Bar */
+        /* Progress Bar - Retro Game Style */
         QProgressBar {
-            border: none;
-            border-radius: 3px;
-            background-color: #1e1e1e;
+            border: 3px solid #6bcf7f;
+            border-radius: 0px;
+            background-color: #1a1a2e;
             text-align: center;
+            color: #ffffff;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
         }
         
         QProgressBar::chunk {
-            background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                                            stop:0 #007acc, stop:1 #569cd6);
-            border-radius: 3px;
+            background-color: #ffd93d;
+            border-right: 2px solid #ffaa00;
         }
         
-        /* Table Widget */
+        /* Table Widget - Pixel Perfect Grid */
         QTableWidget {
-            gridline-color: #3f3f46;
-            background-color: #1e1e1e;
-            alternate-background-color: #252526;
-            selection-background-color: #094771;
-            border: 1px solid #3f3f46;
-            border-radius: 4px;
+            gridline-color: #6bcf7f;
+            background-color: #1a1a2e;
+            alternate-background-color: #242438;
+            selection-background-color: #ff6b9d;
+            border: 4px solid #6bcf7f;
+            border-radius: 0px;
+            font-family: 'Courier New', monospace;
+            font-size: 10pt;
         }
         
         QTableWidget::item {
-            padding: 5px;
-        }
-        
-        QTableWidget::item:selected {
-            background-color: #094771;
+            padding: 8px;
             color: #ffffff;
         }
         
+        QTableWidget::item:selected {
+            background-color: #ff6b9d;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        
         QHeaderView::section {
-            background-color: #2d2d30;
-            color: #cccccc;
-            padding: 6px;
+            background-color: #6bcf7f;
+            color: #1a1a2e;
+            padding: 10px;
             border: none;
-            border-bottom: 2px solid #007acc;
-            font-weight: 600;
-            font-size: 9pt;
+            border-right: 2px solid #4a9960;
+            border-bottom: 3px solid #4a9960;
+            font-weight: bold;
+            font-size: 10pt;
+            font-family: 'Courier New', monospace;
         }
         
-        /* Labels */
+        /* Labels - Bright Colors */
         QLabel {
-            color: #cccccc;
+            color: #ffd93d;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
         }
         
-        /* Scrollbars */
+        /* Scrollbars - Chunky Pixel Style */
         QScrollBar:vertical {
-            border: none;
-            background: #1e1e1e;
-            width: 12px;
+            border: 2px solid #6bcf7f;
+            background: #1a1a2e;
+            width: 16px;
             margin: 0px;
+            border-radius: 0px;
         }
         
         QScrollBar::handle:vertical {
-            background: #3e3e42;
-            min-height: 20px;
-            border-radius: 6px;
+            background: #ff6b9d;
+            min-height: 30px;
+            border-radius: 0px;
+            border: 2px solid #c44569;
         }
         
         QScrollBar::handle:vertical:hover {
-            background: #4e4e52;
+            background: #ffb3d9;
         }
         
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
@@ -141,28 +161,62 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         }
         
         QScrollBar:horizontal {
-            border: none;
-            background: #1e1e1e;
-            height: 12px;
+            border: 2px solid #6bcf7f;
+            background: #1a1a2e;
+            height: 16px;
             margin: 0px;
+            border-radius: 0px;
         }
         
         QScrollBar::handle:horizontal {
-            background: #3e3e42;
-            min-width: 20px;
-            border-radius: 6px;
+            background: #ff6b9d;
+            border: 2px solid #c44569;
+            border-radius: 0px;
+            min-width: 30px;
         }
         
         QScrollBar::handle:horizontal:hover {
-            background: #4e4e52;
+            background: #ffb3d9;
         }
         
         QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
             width: 0px;
         }
+        
+        /* Status Bar - Retro Gaming Feel */
+        QStatusBar {
+            background-color: #6bcf7f;
+            color: #1a1a2e;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            border-top: 3px solid #4a9960;
+        }
+        
+        /* Menu Bar */
+        QMenuBar {
+            background-color: #2a1a3d;
+            color: #ffd93d;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        
+        QMenuBar::item:selected {
+            background-color: #ff6b9d;
+        }
+        
+        QMenu {
+            background-color: #2a1a3d;
+            color: #ffd93d;
+            border: 3px solid #6bcf7f;
+            font-family: 'Courier New', monospace;
+        }
+        
+        QMenu::item:selected {
+            background-color: #ff6b9d;
+        }
         """
         
-        self.setStyleSheet(base_stylesheet + modern_styles)
+        self.setStyleSheet(base_stylesheet + pixel_art_styles)
         
         # Main Props
         self.scanner = Scanner()
@@ -182,7 +236,6 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         
         # Initialize other sub-windows
         self.settings_window = Settings(self, self.icon)
-        self.about_window = About(self, self.icon)
         self.device_window = DeviceWindow(self, self.icon)
 
         # Connect buttons
@@ -193,8 +246,7 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
             (self.btnUnkill,     self.unkill,        unkill_icon,     'Un-kill selected device'),
             (self.btnKillAll,    self.killAll,       killall_icon,    'Kill all devices'),
             (self.btnUnkillAll,  self.unkillAll,     unkillall_icon,  'Un-kill all devices'),
-            (self.btnSettings,   self.openSettings,  settings_icon,   'View elmoCut settings'),
-            (self.btnAbout,      self.openAbout,     about_icon,      'About elmoCut')
+            (self.btnSettings,   self.openSettings,  settings_icon,   'View elmoCut settings')
         ] 
         
         for btn, btn_func, btn_icon, btn_tip in self.buttons:
@@ -288,14 +340,6 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         self.settings_window.show()
         self.settings_window.setWindowState(Qt.WindowNoState)
 
-    def openAbout(self):
-        """
-        Open about window
-        """
-        self.about_window.hide()
-        self.about_window.show()
-        self.about_window.setWindowState(Qt.WindowNoState)
-
     def applySettings(self):
         """
         Apply saved settings
@@ -321,7 +365,6 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         """
         self.hide()
         self.settings_window.hide()
-        self.about_window.hide()
 
     def quit_all(self):
         """
@@ -329,7 +372,6 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         """
         self.killer.unkill_all()
         self.settings_window.close()
-        self.about_window.close()
         self.tray_icon.hide()
         self.from_tray = True
         self.close()
@@ -372,7 +414,6 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         ## If not, ukill all and shutdown
         self.killer.unkill_all()
         self.settings_window.close()
-        self.about_window.close()
 
         self.hide()
         self.tray_icon.hide()

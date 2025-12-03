@@ -1,8 +1,9 @@
 from PyQt5.QtWidgets import QMainWindow, QSpinBox, QLabel, QPushButton, QCheckBox, QHBoxLayout, QVBoxLayout, QWidget, QGroupBox
-from PyQt5.QtGui import QPalette, QColor
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPalette, QColor, QPixmap, QIcon
+from PyQt5.QtCore import Qt, QByteArray
 from networking.nicknames import Nicknames
 from ui.ui_device import Ui_MainWindow
+from assets import device_icon
 
 class DeviceWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, elmocut, icon):
@@ -12,9 +13,10 @@ class DeviceWindow(QMainWindow, Ui_MainWindow):
         self.current_row = -1
         self.__nicknames = Nicknames()
 
-        # Setup UI
+        # Setup UI with device icon
+        self.device_window_icon = self.processIcon(device_icon)
         self.icon = icon
-        self.setWindowIcon(icon)
+        self.setWindowIcon(self.device_window_icon)
         self.setupUi(self)
         
         # Add bandwidth limiting controls
@@ -156,6 +158,16 @@ class DeviceWindow(QMainWindow, Ui_MainWindow):
         self.chk_limit_download.setChecked(False)
         self.chk_limit_upload.setChecked(False)
 
+    @staticmethod
+    def processIcon(icon_data):
+        """Convert icon byte data to QIcon"""
+        byte_array = QByteArray(icon_data)
+        pixmap = QPixmap()
+        pixmap.loadFromData(byte_array)
+        icon = QIcon()
+        icon.addPixmap(pixmap)
+        return icon
+    
     def showEvent(self, event):
         self.setStyleSheet(self.elmocut.styleSheet())
         

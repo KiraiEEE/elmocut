@@ -86,11 +86,20 @@ class Settings(QMainWindow, Ui_MainWindow):
         self.elmocut.tableScan.horizontalHeader().setFont(QFont('Consolas', 11))
 
         if not silent_apply:
-            MsgType.INFO(
-                self,
-                'Apply Settings',
-                'New settings have been applied.'
-            )
+            # Show feedback on button itself
+            original_text = self.btnApply.text()
+            original_style = self.btnApply.styleSheet()
+            self.btnApply.setText('Applied!')
+            self.btnApply.setStyleSheet('background-color: #6bcf7f; color: #1a1a2e; font-weight: bold;')
+            self.btnApply.setEnabled(False)
+            
+            # Reset after 1 second
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(1000, lambda: [
+                self.btnApply.setText(original_text),
+                self.btnApply.setStyleSheet(original_style),
+                self.btnApply.setEnabled(True)
+            ])
         
         if old_iface != iface:
             MsgType.INFO(
@@ -147,7 +156,6 @@ class Settings(QMainWindow, Ui_MainWindow):
         self.elmocut.killer.iface = get_iface_by_name(s['iface'])
         
         self.elmocut.setStyleSheet(self.styleSheet())
-        self.elmocut.about_window.setStyleSheet(self.styleSheet())
 
     def currentSettings(self):
         s = import_settings()
