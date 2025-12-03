@@ -1,17 +1,20 @@
 from concurrent.futures.thread import ThreadPoolExecutor
-from scapy.all import arping
-from time import sleep
+from scapy.all import arping, sr1, ARP, Ether
+from time import sleep, time
+import logging
 from networking.nicknames import Nicknames
 from tools.utils import *
 from constants import *
 from models.device import Device
 from enums import DeviceType
 
+logger = logging.getLogger(__name__)
+
 class Scanner():
     def __init__(self):
         self.iface = get_default_iface()
-        self.device_count = 25
-        self.max_threads = 8
+        self.device_count = 255  # Full subnet scan
+        self.max_threads = 16  # Increased for better performance
         self.__ping_done = 0
         self.devices = []
         self.old_ips = {}
@@ -21,6 +24,7 @@ class Scanner():
         self.perfix = None
         self.qt_progress_signal = int
         self.qt_log_signal = print
+        self._device_cache = {}  # Cache for faster lookups
     
     def generate_ips(self):
         self.ips = [f'{self.perfix}.{i}' for i in range(1, self.device_count)]
@@ -83,47 +87,47 @@ class Scanner():
 
     def devices_appender(self, scan_result):
         """
-        Append scan results to self.devices
+        Optimized device list builder with caching
         """
         nicknames = Nicknames()
 
         self.devices = []
-        unique = []
+        unique = set()  # Use set for O(1) lookups
 
         # Sort by last part of ip xxx.xxx.x.y
         scan_result = sorted(
             scan_result,
-            key=lambda i:int(i[0].split('.')[-1])
+            key=lambda i: int(i[0].split('.')[-1]) if i[0].count('.') == 3 else 0
         )
         
         for ip, mac in scan_result:
             mac = good_mac(mac)
 
-            # Skip me or router and duplicated devices
+            # Skip me, router, and duplicated devices
             if ip in [self.router_ip, self.my_ip] or mac in unique:
                 continue
             
-            # update same device with new ip
+            unique.add(mac)
+            
+            # Update same device with new IP (IP changed detection)
             if self.old_ips.get(mac, ip) != ip:
+                logger.info(f'Device {mac} changed IP from {self.old_ips.get(mac, "unknown")} to {ip}')
                 self.old_ips[mac] = ip
-                unique.append(mac)
-
+            
+            # Use cache for vendor lookup
+            if mac not in self._device_cache:
+                self._device_cache[mac] = get_vendor(mac)
+            
             self.devices.append(
                 Device(
-                    ip = ip,
-                    mac = mac,
-                    vendor = get_vendor(mac),
-                    dtype = DeviceType.USER,
-                    name = nicknames.get_name(mac),
-                    admin = False
+                    ip=ip,
+                    mac=mac,
+                    vendor=self._device_cache[mac],
+                    dtype=DeviceType.USER,
+                    name=nicknames.get_name(mac),
+                    admin=False
                 )
             )
-        
-        # Remove device with old ip
-        for device in self.devices[:]:
-            mac, ip = device.mac, device.ip
-            if self.old_ips.get(mac, ip) != ip:
-                self.devices.remove(device)
         
         # Re-create devices old ips dict
         self.old_ips = {d.mac: d.ip for d in self.devices}
@@ -134,6 +138,8 @@ class Scanner():
         # Clear arp cache to avoid duplicates next time
         if unique:
             self.flush_arp()
+        
+        logger.info(f'Processed {len(self.devices)} devices (including router and self)')
     
     def arping_cache(self):
         """
@@ -152,51 +158,84 @@ class Scanner():
     
     def arp_scan(self):
         """
-        Scan using Scapy arping method 
+        Optimized ARP scan using Scapy with improved reliability
         """
         self.init()
-
+        logger.info(f'Starting ARP scan on {self.router_ip}/24')
+        
+        start_time = time()
+        
+        # Use arping with optimized parameters
         self.generate_ips()
-        scan_result = arping(
-            f"{self.router_ip}/24",
-            iface=self.iface.name,
-            verbose=0,
-            timeout=1
-        )
-        clean_result = [(i[1].psrc, i[1].src) for i in scan_result[0]]
+        
+        try:
+            # Perform ARP scan with better timeout and retry
+            scan_result = arping(
+                f"{self.router_ip}/24",
+                iface=self.iface.name,
+                verbose=0,
+                timeout=2,  # Increased timeout for reliability
+                inter=0.1   # Small interval between packets
+            )
+            clean_result = [(i[1].psrc, i[1].src) for i in scan_result[0]]
+            
+            logger.info(f'ARP scan completed in {time() - start_time:.2f}s, found {len(clean_result)} devices')
+        except Exception as e:
+            logger.error(f'ARP scan failed: {e}')
+            clean_result = []
 
         self.devices_appender(clean_result)
 
     def ping_scan(self):
         """
-        Ping all devices at once [CPU Killing function]
-           (All Threads will run at the same tine)
+        Optimized ping scan with better thread management
         """
         self.init()
         self.__ping_done = 0
+        logger.info(f'Starting ping scan with {self.max_threads} threads')
+        
+        start_time = time()
         
         self.generate_ips()
         self.ping_thread_pool()
         
+        # Progress monitoring with timeout
+        timeout = 60  # 60 seconds timeout
         while self.__ping_done < self.device_count - 1:
-            # Add a sleep to overcome High CPU usage
-            sleep(.01)
+            if time() - start_time > timeout:
+                logger.warning('Ping scan timeout reached')
+                break
+            # Reduced sleep for faster UI updates
+            sleep(.005)
             self.qt_progress_signal(self.__ping_done)
         
+        logger.info(f'Ping scan completed in {time() - start_time:.2f}s')
         return True
     
     @threaded
     def ping_thread_pool(self):
         """
-        Control maximum threads running at once
+        Control maximum threads running at once with better resource management
         """
-        with ThreadPoolExecutor(self.max_threads) as executor:
-            for ip in self.ips:
-                executor.submit(self.ping, ip)
+        with ThreadPoolExecutor(max_workers=self.max_threads) as executor:
+            # Submit all ping tasks
+            futures = [executor.submit(self.ping, ip) for ip in self.ips]
+            
+            # Wait for completion
+            for future in futures:
+                try:
+                    future.result(timeout=5)
+                except Exception as e:
+                    logger.debug(f'Ping task failed: {e}')
 
     def ping(self, ip):
         """
-        Ping a specific ip with native command "ping -n"
+        Optimized ping with faster timeout
         """
-        terminal(CMD_PING_DEVICE(ip), decode=False)
-        self.__ping_done += 1
+        try:
+            # Use faster ping with minimal timeout
+            terminal(CMD_PING_DEVICE(ip), decode=False)
+        except Exception as e:
+            logger.debug(f'Ping failed for {ip}: {e}')
+        finally:
+            self.__ping_done += 1

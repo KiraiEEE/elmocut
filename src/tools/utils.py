@@ -1,11 +1,31 @@
-from scapy.all import conf, get_if_list, get_windows_if_list, get_if_hwaddr
+from scapy.all import conf, get_if_list, get_if_hwaddr
 from subprocess import check_output, CalledProcessError
 from socket import socket
 from threading import Thread
 from manuf import manuf
+import logging
+
+# Import Windows-specific functions with compatibility for newer Scapy versions
+try:
+    from scapy.all import get_windows_if_list
+except ImportError:
+    # Newer Scapy versions (2.5.0+) use different imports
+    try:
+        from scapy.arch.windows import get_windows_if_list
+    except ImportError:
+        # Fallback for even newer versions
+        def get_windows_if_list():
+            """Fallback implementation for newer Scapy versions"""
+            import scapy.arch.windows as windows
+            if hasattr(windows, 'get_windows_if_list'):
+                return windows.get_windows_if_list()
+            # Last resort - return empty list
+            return []
 
 from models.ifaces import NetFace
 from constants import *
+
+logger = logging.getLogger(__name__)
 
 p = manuf.MacParser()
 

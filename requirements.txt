@@ -1,7 +1,19 @@
-pyqt5-tools==5.13.0.1.5
-qdarkstyle==2.8.1
-pyperclip==1.8.0
-PyQt5==5.13.0
-scapy==2.4.4
-manuf==1.1.1
-requests==2.28.2
+PyQt5>=5.15.9
+pyqt5-tools>=5.15.9.3.3
+qdarkstyle>=3.2.3
+
+# Network & Packet Manipulation
+scapy>=2.5.0
+manuf>=1.1.5
+
+# Utilities
+pyperclip>=1.8.2
+requests>=2.31.0
+
+# Windows-specific (optional but recommended)
+pywin32>=306; platform_system=="Windows"
+
+# Development tools (optional)
+# pyinstaller>=6.3.0
+# black>=24.0.0
+# flake8>=7.0.0

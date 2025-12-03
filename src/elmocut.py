@@ -1,5 +1,23 @@
+import sys
+import os
+from pathlib import Path
+
+# Add src directory to path if needed
+src_dir = Path(__file__).parent
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+
 from sys import argv, exit
 from PyQt5.QtWidgets import QApplication
+import logging
+
+# Try to import logging_config, use basic config if not available
+try:
+    from logging_config import setup_logging
+    LOGGING_AVAILABLE = True
+except ImportError:
+    LOGGING_AVAILABLE = False
+    logging.basicConfig(level=logging.INFO)
 
 from tools.utils import goto
 from tools.utils_gui import npcap_exists, duplicate_elmocut, repair_settings, migrate_settings_file
@@ -13,6 +31,12 @@ from constants import *
 # import debug.test
 
 if __name__ == "__main__":
+    # Initialize logging first
+    if LOGGING_AVAILABLE:
+        setup_logging(logging.INFO)
+    logger = logging.getLogger(__name__)
+    logger.info(f'Starting elmoCut v{VERSION}')
+    
     app = QApplication(argv)
     icon = ElmoCut.processIcon(app_icon)
 
@@ -35,9 +59,9 @@ if __name__ == "__main__":
         GUI.resizeEvent()
         GUI.scanner.init()
         GUI.scanner.flush_arp()
+        # Set attacker's MAC to prevent self-targeting
+        GUI.killer.set_my_mac(GUI.scanner.my_mac)
         GUI.scanEasy()
-        GUI.UpdateThread_Starter()
         # Bring window to top on startup
         GUI.activateWindow()
-        #GUI.scanner.print_report()
         exit(app.exec_())

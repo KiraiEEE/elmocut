@@ -171,8 +171,14 @@ class Settings(QMainWindow, Ui_MainWindow):
         self.setStyleSheet(load_stylesheet() if s['dark'] else '')
     
     def checkUpdate(self):
-        self.elmocut.update_thread.prompt_if_latest = True
-        self.elmocut.update_thread.start()
+        # Update functionality disabled in KiraiEEE Edition
+        from PyQt5.QtWidgets import QMessageBox
+        QMessageBox.information(
+            self,
+            'Updates Disabled',
+            'Update checking is disabled in Elmocut - KiraiEEE Edition.\n\n'
+            'This is a custom modified version.'
+        )
     
     def loadInterfaces(self):
         self.comboInterface.clear()

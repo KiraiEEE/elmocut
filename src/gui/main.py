@@ -16,17 +16,15 @@ from gui.device import DeviceWindow
 from networking.scanner import Scanner
 from networking.killer import Killer
 
-from tools.qtools import colored_item, MsgType, Buttons, clickable
+from tools.qtools import colored_item, MsgType, Buttons
 from tools.utils_gui import set_settings, get_settings
-from tools.utils import goto, is_connected
+from tools.utils import is_connected
 
 from assets import *
 
-from bridge import ScanThread, UpdateThread
+from bridge import ScanThread
 
 from constants import *
-
-# from qt_material import build_stylesheet
 
 class ElmoCut(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -36,9 +34,135 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         # Add window icon
         self.setWindowIcon(self.icon)
         self.setupUi(self)
-        # stylesheet = build_stylesheet('dark_teal.xml', 0, {}, 'theme')
-        # self.setStyleSheet(stylesheet)
-        self.setStyleSheet(load_stylesheet())
+        base_stylesheet = load_stylesheet()
+        
+        # Modern custom styles
+        modern_styles = """
+        /* Modern Button Styles */
+        QPushButton {
+            background-color: #2d2d30;
+            border: 1px solid #3f3f46;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-weight: 500;
+            font-size: 10pt;
+        }
+        
+        QPushButton:hover {
+            background-color: #3e3e42;
+            border: 1px solid #569cd6;
+        }
+        
+        QPushButton:pressed {
+            background-color: #1e1e1e;
+            border: 1px solid #007acc;
+        }
+        
+        QPushButton:disabled {
+            background-color: #252526;
+            border: 1px solid #3f3f46;
+            color: #6d6d6d;
+        }
+        
+        /* Toolbar Separator Lines */
+        QFrame[frameShape="5"] {
+            color: #3f3f46;
+            max-width: 1px;
+        }
+        
+        /* Progress Bar */
+        QProgressBar {
+            border: none;
+            border-radius: 3px;
+            background-color: #1e1e1e;
+            text-align: center;
+        }
+        
+        QProgressBar::chunk {
+            background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                            stop:0 #007acc, stop:1 #569cd6);
+            border-radius: 3px;
+        }
+        
+        /* Table Widget */
+        QTableWidget {
+            gridline-color: #3f3f46;
+            background-color: #1e1e1e;
+            alternate-background-color: #252526;
+            selection-background-color: #094771;
+            border: 1px solid #3f3f46;
+            border-radius: 4px;
+        }
+        
+        QTableWidget::item {
+            padding: 5px;
+        }
+        
+        QTableWidget::item:selected {
+            background-color: #094771;
+            color: #ffffff;
+        }
+        
+        QHeaderView::section {
+            background-color: #2d2d30;
+            color: #cccccc;
+            padding: 6px;
+            border: none;
+            border-bottom: 2px solid #007acc;
+            font-weight: 600;
+            font-size: 9pt;
+        }
+        
+        /* Labels */
+        QLabel {
+            color: #cccccc;
+        }
+        
+        /* Scrollbars */
+        QScrollBar:vertical {
+            border: none;
+            background: #1e1e1e;
+            width: 12px;
+            margin: 0px;
+        }
+        
+        QScrollBar::handle:vertical {
+            background: #3e3e42;
+            min-height: 20px;
+            border-radius: 6px;
+        }
+        
+        QScrollBar::handle:vertical:hover {
+            background: #4e4e52;
+        }
+        
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            height: 0px;
+        }
+        
+        QScrollBar:horizontal {
+            border: none;
+            background: #1e1e1e;
+            height: 12px;
+            margin: 0px;
+        }
+        
+        QScrollBar::handle:horizontal {
+            background: #3e3e42;
+            min-width: 20px;
+            border-radius: 6px;
+        }
+        
+        QScrollBar::handle:horizontal:hover {
+            background: #4e4e52;
+        }
+        
+        QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+            width: 0px;
+        }
+        """
+        
+        self.setStyleSheet(base_stylesheet + modern_styles)
         
         # Main Props
         self.scanner = Scanner()
@@ -47,7 +171,7 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         # Settings props
         self.minimize = True
         self.remember = False
-        self.autoupdate = True
+        self.autoupdate = False  # Disabled in KiraiEEE Edition
 
         self.from_tray = False
 
@@ -55,9 +179,6 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         self.scan_thread = ScanThread()
         self.scan_thread.thread_finished.connect(self.ScanThread_Reciever)
         self.scan_thread.progress.connect(self.pgbar.setValue)
-
-        self.update_thread = UpdateThread()
-        self.update_thread.thread_finished.connect(self.UpdateThread_Reciever)
         
         # Initialize other sub-windows
         self.settings_window = Settings(self, self.icon)
@@ -80,9 +201,6 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
             btn.setToolTip(btn_tip)
             btn.clicked.connect(btn_func)
             btn.setIcon(self.processIcon(btn_icon))
-
-        clickable(self.lblDonate).connect(self.buymeacoffee)
-        self.setImage(self.lblDonate, donate_icon)
         
         self.pgbar.setVisible(False)
 
@@ -515,41 +633,4 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         self.pgbar.setVisible(False)
         self.taskbar_progress.setVisible(False)
         self.processDevices()
-    
-    def UpdateThread_Starter(self):
-        """
-        Update Thread starter
-        """
-        if self.autoupdate:
-            self.update_thread.prompt_if_latest = False
-            self.update_thread.start()
 
-    def UpdateThread_Reciever(self):
-        """
-        Update Thread reciever
-        """
-        new_version = self.update_thread.github_version
-        update_url = self.update_thread.url
-        
-        if new_version == 'None':
-            return
-        
-        if new_version != VERSION:
-            if MsgType.INFO(
-                self,
-                'elmoCut Update Available',
-                'A new version is available.\n'
-                f'Do you want to download {new_version}?',
-                Buttons.YES | Buttons.NO
-            ) == Buttons.YES:
-                goto(update_url)
-        
-        if new_version == VERSION and self.update_thread.prompt_if_latest:
-            MsgType.INFO(
-                self.settings_window, # Run this within settings window
-                'Check for update',
-                'You have the latest version installed.'
-            )
-    
-    # Open BuyMeACoffee page
-    buymeacoffee = lambda self: goto('https://www.buymeacoffee.com/elmoiv')

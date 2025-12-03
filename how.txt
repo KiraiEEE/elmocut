@@ -1,0 +1,53 @@
+═══════════════════════════════════════════════
+  Elmocut - KiraiEEE Edition v1.0.8
+═══════════════════════════════════════════════
+
+┌─────────────────────────────────────────────┐
+│ QUICK START (Run as Administrator!)        │
+└─────────────────────────────────────────────┘
+
+  Double-click:  START.bat
+  
+  Or terminal:   python start.py --quick
+
+
+┌─────────────────────────────────────────────┐
+│ INSTALL DEPENDENCIES                        │
+└─────────────────────────────────────────────┘
+
+  pip install -r requirements.txt
+
+  Required: Python 3.8+, Npcap
+  Download Npcap: https://nmap.org/npcap/
+
+
+┌─────────────────────────────────────────────┐
+│ BUILD .EXE FILE                             │
+└─────────────────────────────────────────────┘
+
+  pip install pyinstaller
+
+  pyinstaller --onefile --windowed --icon=exe\icon.ico --name="Elmocut-KiraiEEE" --add-data="exe\manuf;exe" src\elmocut.py
+
+  Output: dist\Elmocut-KiraiEEE.exe
+
+
+┌─────────────────────────────────────────────┐
+│ COMPILE UI (After editing .ui files)       │
+└─────────────────────────────────────────────┘
+
+  python -m PyQt5.uic.pyuic -x exe\ui_main.ui -o src\ui\ui_main.py
+
+
+┌─────────────────────────────────────────────┐
+│ KEY FILES                                   │
+└─────────────────────────────────────────────┘
+
+  src\elmocut.py           Entry point
+  src\gui\main.py          Main window
+  src\networking\killer.py ARP spoofing
+  src\networking\limiter.py Bandwidth limiting
+  START.bat                Launcher
+
+
+⚠️  IMPORTANT: Always run as Administrator for ARP operations!
