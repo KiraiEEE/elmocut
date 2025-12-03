@@ -102,12 +102,19 @@ class Scanner():
         
         for ip, mac in scan_result:
             mac = good_mac(mac)
+            
+            # Normalize MAC for comparison
+            mac_normalized = mac.upper().replace('-', ':')
 
             # Skip me, router, and duplicated devices
-            if ip in [self.router_ip, self.my_ip] or mac in unique:
+            if ip in [self.router_ip, self.my_ip]:
                 continue
             
-            unique.add(mac)
+            # Check for duplicates using normalized MAC
+            if mac_normalized in unique:
+                continue
+            
+            unique.add(mac_normalized)
             
             # Update same device with new IP (IP changed detection)
             if self.old_ips.get(mac, ip) != ip:
@@ -158,34 +165,53 @@ class Scanner():
     
     def arp_scan(self):
         """
-        Fast ARP scan using Scapy with optimized speed settings
+        Fast ARP scan using Scapy with improved reliability
         """
         self.init()
         logger.info(f'Starting ARP scan on {self.router_ip}/24')
         
         start_time = time()
+        all_devices = set()  # Use set to collect unique devices
         
         # Use arping with optimized parameters
         self.generate_ips()
         
         try:
-            # Single fast pass with aggressive timing
+            # Perform ARP scan with better timeout
             scan_result = arping(
                 f"{self.router_ip}/24",
                 iface=self.iface.name,
                 verbose=0,
-                timeout=1,    # Fast timeout
-                inter=0.01,   # Very small interval for speed
-                retry=1       # Single retry only
+                timeout=2,    # Increased timeout for reliability
+                inter=0.01,   # Small interval for speed
+                retry=1       # Single retry
             )
             
-            clean_result = [(item[1].psrc, item[1].src) for item in scan_result[0]]
-            logger.info(f'ARP scan completed in {time() - start_time:.2f}s, found {len(clean_result)} devices')
+            # Collect results
+            for item in scan_result[0]:
+                all_devices.add((item[1].psrc, item[1].src))
+            
+            logger.info(f'ARP scan found {len(all_devices)} devices')
             
         except Exception as e:
             logger.error(f'ARP scan failed: {e}')
-            clean_result = []
-
+        
+        # Fallback: Also check system ARP cache for any missed devices
+        try:
+            arp_cache = terminal(CMD_ARP_CACHE(self.my_ip))
+            if arp_cache:
+                cache_lines = [line.split()[:2] for line in arp_cache.split('\n') if line.split() and len(line.split()) >= 2]
+                for ip, mac in cache_lines:
+                    # Validate IP format
+                    if ip.count('.') == 3 and mac.count('-') >= 2:
+                        all_devices.add((ip, mac))
+                logger.info(f'Added {len(cache_lines)} devices from ARP cache')
+        except Exception as e:
+            logger.debug(f'ARP cache check failed: {e}')
+        
+        clean_result = list(all_devices)
+        logger.info(f'Total scan completed in {time() - start_time:.2f}s, found {len(clean_result)} unique devices')
+        
         self.devices_appender(clean_result)
 
     def ping_scan(self):
@@ -237,12 +263,12 @@ class Scanner():
             # Submit all ping tasks
             futures = [executor.submit(self.ping, ip) for ip in self.ips]
             
-            # Wait for completion
+            # Wait for completion with timeout
             for future in futures:
                 try:
-                    future.result(timeout=5)
-                except Exception as e:
-                    logger.debug(f'Ping task failed: {e}')
+                    future.result(timeout=3)  # Reduced timeout
+                except Exception:
+                    pass  # Silently ignore failures to reduce log spam
 
     def ping(self, ip):
         """

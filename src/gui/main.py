@@ -48,7 +48,7 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
             background-color: #ff6b9d;
             border: 3px solid #c44569;
             border-radius: 0px;
-            padding: 10px 18px;
+            padding: 8px 14px;
             font-weight: bold;
             font-size: 11pt;
             color: #ffffff;

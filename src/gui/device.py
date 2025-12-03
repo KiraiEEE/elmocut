@@ -37,6 +37,7 @@ class DeviceWindow(QMainWindow, Ui_MainWindow):
         
         # Speed presets
         preset_layout = QHBoxLayout()
+        preset_layout.setSpacing(8)  # Add spacing between buttons
         preset_label = QLabel("Quick Presets:")
         self.btn_slow = QPushButton("Slow (128KB/s)")
         self.btn_medium = QPushButton("Medium (512KB/s)")
@@ -45,6 +46,11 @@ class DeviceWindow(QMainWindow, Ui_MainWindow):
         self.btn_slow.setMaximumWidth(120)
         self.btn_medium.setMaximumWidth(140)
         self.btn_fast.setMaximumWidth(120)
+        
+        # Add padding to preset buttons
+        self.btn_slow.setStyleSheet("padding: 8px 12px;")
+        self.btn_medium.setStyleSheet("padding: 8px 12px;")
+        self.btn_fast.setStyleSheet("padding: 8px 12px;")
         
         self.btn_slow.clicked.connect(lambda: self.apply_preset(128, 128))
         self.btn_medium.clicked.connect(lambda: self.apply_preset(512, 512))
@@ -84,12 +90,16 @@ class DeviceWindow(QMainWindow, Ui_MainWindow):
         
         # Apply button
         btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(10)  # Add spacing between buttons
         self.btn_apply_bandwidth = QPushButton("Apply Limits")
         self.btn_remove_bandwidth = QPushButton("Remove")
+        
+        # Add padding to action buttons
+        self.btn_apply_bandwidth.setStyleSheet("padding: 10px 16px;")
+        self.btn_remove_bandwidth.setStyleSheet("padding: 10px 16px;")
+        
         self.btn_apply_bandwidth.clicked.connect(self.apply_bandwidth_limits)
         self.btn_remove_bandwidth.clicked.connect(self.remove_bandwidth_limits)
-        self.btn_apply_bandwidth.setStyleSheet("background-color: #4CAF50; font-weight: bold;")
-        self.btn_remove_bandwidth.setStyleSheet("background-color: #f44336; font-weight: bold;")
         btn_layout.addWidget(self.btn_apply_bandwidth)
         btn_layout.addWidget(self.btn_remove_bandwidth)
         
