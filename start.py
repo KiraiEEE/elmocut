@@ -318,8 +318,7 @@ def main():
     
     print_colored("""
     ================================================
-                elmoCut Launcher                
-           All-in-One Startup Script            
+                       SIGMA                           
     ================================================
     """, Colors.CYAN)
     

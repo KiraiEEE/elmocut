@@ -158,16 +158,18 @@ class Killer:
     
     def limit_bandwidth(self, victim, download_kbps=None, upload_kbps=None):
         """
-        Apply bandwidth limits to a device (must be killed first for MITM)
+        Apply bandwidth limits to a device (auto-kills if needed)
         
         Args:
             victim: Device object
             download_kbps: Download speed limit in KB/s (None = unlimited)
             upload_kbps: Upload speed limit in KB/s (None = unlimited)
         """
+        # Auto-kill device if not already killed (for MITM)
         if victim.mac not in self.killed:
-            logger.warning(f'Device {victim.mac} must be killed before applying bandwidth limits')
-            return False
+            logger.info(f'Auto-killing {victim.ip} for bandwidth limiting')
+            self.kill(victim)
+            sleep(0.5)  # Brief delay to establish MITM
         
         self.bandwidth_limiter.set_limit(victim.mac, download_kbps, upload_kbps)
         logger.info(f'Bandwidth limits applied to {victim.ip}: DL={download_kbps}KB/s, UL={upload_kbps}KB/s')

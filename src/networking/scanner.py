@@ -158,42 +158,28 @@ class Scanner():
     
     def arp_scan(self):
         """
-        Optimized ARP scan using Scapy with improved reliability and multi-pass
+        Fast ARP scan using Scapy with optimized speed settings
         """
         self.init()
         logger.info(f'Starting ARP scan on {self.router_ip}/24')
         
         start_time = time()
-        all_devices = set()  # Use set to avoid duplicates
         
         # Use arping with optimized parameters
         self.generate_ips()
         
         try:
-            # Perform multiple passes for better detection
-            passes = 2  # Two passes to catch more devices
-            for pass_num in range(passes):
-                logger.info(f'ARP scan pass {pass_num + 1}/{passes}')
-                
-                # Perform ARP scan with better timeout and retry
-                scan_result = arping(
-                    f"{self.router_ip}/24",
-                    iface=self.iface.name,
-                    verbose=0,
-                    timeout=3,  # Increased timeout for reliability
-                    inter=0.05,  # Smaller interval for faster scanning
-                    retry=2      # Retry failed requests
-                )
-                
-                # Add results to set (automatically deduplicates)
-                for item in scan_result[0]:
-                    all_devices.add((item[1].psrc, item[1].src))
-                
-                # Small delay between passes
-                if pass_num < passes - 1:
-                    sleep(0.2)
+            # Single fast pass with aggressive timing
+            scan_result = arping(
+                f"{self.router_ip}/24",
+                iface=self.iface.name,
+                verbose=0,
+                timeout=1,    # Fast timeout
+                inter=0.01,   # Very small interval for speed
+                retry=1       # Single retry only
+            )
             
-            clean_result = list(all_devices)
+            clean_result = [(item[1].psrc, item[1].src) for item in scan_result[0]]
             logger.info(f'ARP scan completed in {time() - start_time:.2f}s, found {len(clean_result)} devices')
             
         except Exception as e:

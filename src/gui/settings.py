@@ -93,14 +93,15 @@ class Settings(QMainWindow, Ui_MainWindow):
             self.btnApply.setStyleSheet('background-color: #6bcf7f; color: #1a1a2e; font-weight: bold;')
             self.btnApply.setEnabled(False)
             
-            # Reset after 1 second
+            # Reset after 1.5 seconds
             from PyQt5.QtCore import QTimer
-            QTimer.singleShot(1000, lambda: [
+            QTimer.singleShot(1500, lambda: [
                 self.btnApply.setText(original_text),
                 self.btnApply.setStyleSheet(original_style),
                 self.btnApply.setEnabled(True)
             ])
         
+        # Only close window if interface changed (requires restart)
         if old_iface != iface:
             MsgType.INFO(
                 self,
@@ -111,8 +112,8 @@ class Settings(QMainWindow, Ui_MainWindow):
             # Restart elmoCut via restart.exe
             __import__('os').system('start "" restart.exe')
             self.elmocut.quit_all()
-        
-        self.close()
+            self.close()
+        # Otherwise, keep window open for more changes
 
     def Defaults(self):
         if MsgType.WARN(

@@ -48,11 +48,12 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
             background-color: #ff6b9d;
             border: 3px solid #c44569;
             border-radius: 0px;
-            padding: 8px 16px;
+            padding: 10px 18px;
             font-weight: bold;
             font-size: 11pt;
             color: #ffffff;
             font-family: 'Courier New', monospace;
+            margin: 2px;
         }
         
         QPushButton:hover {
@@ -107,7 +108,7 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         }
         
         QTableWidget::item {
-            padding: 8px;
+            padding: 10px 12px;
             color: #ffffff;
         }
         
@@ -120,7 +121,7 @@ class ElmoCut(QMainWindow, Ui_MainWindow):
         QHeaderView::section {
             background-color: #6bcf7f;
             color: #1a1a2e;
-            padding: 10px;
+            padding: 12px 10px;
             border: none;
             border-right: 2px solid #4a9960;
             border-bottom: 3px solid #4a9960;
