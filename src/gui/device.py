@@ -39,9 +39,9 @@ class DeviceWindow(QMainWindow, Ui_MainWindow):
         preset_layout = QHBoxLayout()
         preset_layout.setSpacing(8)  # Add spacing between buttons
         preset_label = QLabel("Quick Presets:")
-        self.btn_slow = QPushButton("Slow (128KB/s)")
-        self.btn_medium = QPushButton("Medium (512KB/s)")
-        self.btn_fast = QPushButton("Fast (2MB/s)")
+        self.btn_slow = QPushButton("128KB/s")
+        self.btn_medium = QPushButton("512KB/s")
+        self.btn_fast = QPushButton("2MB/s")
         
         self.btn_slow.setMaximumWidth(120)
         self.btn_medium.setMaximumWidth(140)
