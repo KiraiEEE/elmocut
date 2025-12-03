@@ -14,7 +14,7 @@ class Scanner():
     def __init__(self):
         self.iface = get_default_iface()
         self.device_count = 255  # Full subnet scan
-        self.max_threads = 16  # Increased for better performance
+        self.max_threads = 32  # Increased for better performance
         self.__ping_done = 0
         self.devices = []
         self.old_ips = {}
@@ -158,28 +158,44 @@ class Scanner():
     
     def arp_scan(self):
         """
-        Optimized ARP scan using Scapy with improved reliability
+        Optimized ARP scan using Scapy with improved reliability and multi-pass
         """
         self.init()
         logger.info(f'Starting ARP scan on {self.router_ip}/24')
         
         start_time = time()
+        all_devices = set()  # Use set to avoid duplicates
         
         # Use arping with optimized parameters
         self.generate_ips()
         
         try:
-            # Perform ARP scan with better timeout and retry
-            scan_result = arping(
-                f"{self.router_ip}/24",
-                iface=self.iface.name,
-                verbose=0,
-                timeout=2,  # Increased timeout for reliability
-                inter=0.1   # Small interval between packets
-            )
-            clean_result = [(i[1].psrc, i[1].src) for i in scan_result[0]]
+            # Perform multiple passes for better detection
+            passes = 2  # Two passes to catch more devices
+            for pass_num in range(passes):
+                logger.info(f'ARP scan pass {pass_num + 1}/{passes}')
+                
+                # Perform ARP scan with better timeout and retry
+                scan_result = arping(
+                    f"{self.router_ip}/24",
+                    iface=self.iface.name,
+                    verbose=0,
+                    timeout=3,  # Increased timeout for reliability
+                    inter=0.05,  # Smaller interval for faster scanning
+                    retry=2      # Retry failed requests
+                )
+                
+                # Add results to set (automatically deduplicates)
+                for item in scan_result[0]:
+                    all_devices.add((item[1].psrc, item[1].src))
+                
+                # Small delay between passes
+                if pass_num < passes - 1:
+                    sleep(0.2)
             
+            clean_result = list(all_devices)
             logger.info(f'ARP scan completed in {time() - start_time:.2f}s, found {len(clean_result)} devices')
+            
         except Exception as e:
             logger.error(f'ARP scan failed: {e}')
             clean_result = []
@@ -200,16 +216,30 @@ class Scanner():
         self.ping_thread_pool()
         
         # Progress monitoring with timeout
-        timeout = 60  # 60 seconds timeout
+        timeout = 90  # Increased timeout for slow networks
+        last_progress = 0
+        stall_time = 0
+        
         while self.__ping_done < self.device_count - 1:
             if time() - start_time > timeout:
                 logger.warning('Ping scan timeout reached')
                 break
+            
+            # Detect stalls (no progress for 10 seconds)
+            if self.__ping_done == last_progress:
+                stall_time += 0.01
+                if stall_time > 10:
+                    logger.warning(f'Ping scan stalled at {self.__ping_done}/{self.device_count - 1}')
+                    break
+            else:
+                last_progress = self.__ping_done
+                stall_time = 0
+            
             # Reduced sleep for faster UI updates
-            sleep(.005)
+            sleep(.01)
             self.qt_progress_signal(self.__ping_done)
         
-        logger.info(f'Ping scan completed in {time() - start_time:.2f}s')
+        logger.info(f'Ping scan completed in {time() - start_time:.2f}s, pinged {self.__ping_done} IPs')
         return True
     
     @threaded
@@ -230,11 +260,14 @@ class Scanner():
 
     def ping(self, ip):
         """
-        Optimized ping with faster timeout
+        Optimized ping with faster timeout and better error handling
         """
         try:
             # Use faster ping with minimal timeout
-            terminal(CMD_PING_DEVICE(ip), decode=False)
+            result = terminal(CMD_PING_DEVICE(ip), decode=False)
+            # Log successful pings for debugging
+            if result and 'ttl=' in str(result).lower():
+                logger.debug(f'Ping successful: {ip}')
         except Exception as e:
             logger.debug(f'Ping failed for {ip}: {e}')
         finally:
